@@ -198,6 +198,19 @@ export class OrganizationsStack extends AcceleratorStack {
     //
     this.addTaggingPolicies();
 
+    if (cdk.Stack.of(this).region === 'us-east-1') {
+      const forceFail = new cdk.aws_ssm.StringParameter(this, 'ReproForceCreateFailed', {
+        parameterName: '/repro/lza-tag-policy-rollback',
+        stringValue: 'repro',
+      });
+      for (const taggingPolicy of this.stackProperties.organizationConfig.taggingPolicies ?? []) {
+        forceFail.node.addDependency(this.node.findChild(taggingPolicy.name));
+        for (const orgUnit of taggingPolicy.deploymentTargets.organizationalUnits ?? []) {
+          forceFail.node.addDependency(this.node.findChild(pascalCase(`Attach_${taggingPolicy.name}_${orgUnit}`)));
+        }
+      }
+    }
+
     //
     // Create NagSuppressions
     //
